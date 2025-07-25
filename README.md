@@ -23,7 +23,10 @@ This dashboard provides a real-time view of the global conversation around AI sa
 
 This project leverages a combination of data science and software engineering practices to create a robust analysis pipeline.
 
-- **Data Collection:** The [NewsAPI](https://newsapi.org/) is used to fetch relevant news articles based on a highly specific, strategic search query.
+
+- **Data Collection:** The [NewsAPI](https://newsapi.org/) is used to fetch relevant news articles. The dataset is built using a highly specific, strategic search query that targets key phrases such as:
+    - **Core Phrases:** `"AI safety"`, `"AI alignment"`, `"AI governance"`, `"responsible AI"`, `"AGI"`, `"EU AI Act"`
+    - **Associated Concepts:** `existential risk`, `regulation`, `ethics`, `bias`, `misinformation`, `disinformation`, `copyright`, `red-teaming`, and `interpretability` when mentioned with AI.
 - **Data Processing & Analysis:**
     - **Pandas:** For data manipulation and aggregation.
     - **NLTK (VADER):** For nuanced sentiment analysis tuned for news and social media text.
