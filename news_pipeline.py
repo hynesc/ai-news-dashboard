@@ -34,7 +34,6 @@ class NewsProcessor:
         self.stop_words.update(['ai', 'artificial', 'intelligence', 'agi'])
 
     def _download_nltk_resources(self):
-        # ... (no changes in this method)
         resources = ["vader_lexicon", "punkt", "wordnet", "stopwords"]
         for resource in resources:
             try:
@@ -44,7 +43,6 @@ class NewsProcessor:
                 nltk.download(resource, quiet=True)
 
     def fetch_articles(self, query: str) -> List[Dict[str, Any]]:
-        # ... (no changes in this method)
         print(f"Fetching news for query: '{query}'...")
         try:
             response = self.api.get_everything(q=query, language="en", sort_by="relevancy", page_size=100)
@@ -54,7 +52,6 @@ class NewsProcessor:
             return []
 
     def analyze_sentiment(self, articles: List[Dict[str, Any]]) -> pd.DataFrame:
-        # ... (no changes in this method)
         processed_data = []
         for article in articles:
             title = article.get('title', '')
@@ -72,7 +69,6 @@ class NewsProcessor:
         return pd.DataFrame(processed_data)
 
     def get_top_ngrams(self, texts: pd.Series, n_gram_range: tuple = (2, 3), n_top: int = 15) -> None:
-        # ... (no changes in this method)
         print(f"\n--- Top {n_top} Concepts (Bi-grams & Tri-grams) ---")
         try:
             vectorizer = CountVectorizer(ngram_range=n_gram_range, stop_words='english')
