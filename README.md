@@ -2,13 +2,10 @@
 
 A live, automated dashboard that tracks and analyzes global news discourse on the critical topics of AI safety, alignment, ethics, and policy.
 
----
-### Live Dashboard
+## Live Dashboard
 
 You can view the deployed interactive dashboard here:
 **[https://ai-news-dashboard.streamlit.app/](https://ai-news-dashboard.streamlit.app/)**
-
----
 
 ## Features
 
