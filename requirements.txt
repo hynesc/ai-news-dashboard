@@ -1,0 +1,8 @@
+pandas
+newsapi-python
+nltk
+scikit-learn
+streamlit
+plotly
+wordcloud
+matplotlib
