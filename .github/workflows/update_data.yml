@@ -1,0 +1,43 @@
+name: Update News Data
+
+on:
+  schedule:
+    # This runs the script every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # This allows you to run it manually from the "Actions" tab in GitHub
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run news pipeline
+        env:
+          NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+        run: python news_pipeline.py
+
+      - name: Commit and push updated data
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add news_data.csv
+          git diff --staged --quiet || git commit -m "Update news data" && git push
