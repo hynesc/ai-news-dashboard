@@ -1,5 +1,3 @@
-# app.py
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -7,6 +5,24 @@ from sklearn.feature_extraction.text import CountVectorizer
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 import re
+import nltk
+
+# --- Function to download NLTK data ---
+@st.cache_resource
+def download_nltk_resources():
+    """Downloads all necessary NLTK resources if they don't exist."""
+    resources = ["stopwords", "punkt"]
+    for resource in resources:
+        try:
+            # A robust way to check if the data is present
+            nltk.data.find(f"corpora/{resource}.zip" if resource == 'stopwords' else f"tokenizers/{resource}")
+        except LookupError:
+            print(f"Downloading NLTK resource: {resource}...")
+            nltk.download(resource, quiet=True)
+
+# --- Call the downloader at the start ---
+download_nltk_resources()
+
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -48,7 +64,7 @@ def create_wordcloud(texts):
     """Generates and returns a word cloud figure."""
     from nltk.corpus import stopwords
     stop_words = set(stopwords.words('english'))
-    stop_words.update(['ai', 's'])
+    stop_words.update(['ai'])    # Manually add 'ai' as a stop word
     
     text = " ".join(texts)
     wordcloud = WordCloud(
@@ -84,7 +100,6 @@ else:
     if filtered_data.empty:
         st.warning(f"No articles found for the selected timeframe: **{selected_timeframe_key}**.")
     else:
-        # (Metrics and Visualization Tabs remain the same...)
         st.header(f"Analytics for: {selected_timeframe_key}")
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Articles", f"{len(filtered_data):,}")
@@ -128,7 +143,6 @@ else:
             neg_ngrams_df = get_ngrams_df(negative_articles['title'].dropna())
             st.dataframe(neg_ngrams_df, use_container_width=True)
 
-        # --- Deep Dive Feature ---
         st.header("Deep Dive into Concepts")
         all_concepts = pd.concat([pos_ngrams_df, neg_ngrams_df])['Concept'].dropna().unique().tolist()
         
@@ -137,12 +151,9 @@ else:
             if selected_concept:
                 st.subheader(f"Articles related to '{selected_concept}'")
                 
-                # Split the n-gram concept into individual words
                 search_terms = selected_concept.split()
-                # Create a regex pattern that ensures all words are present
                 pattern = "".join([f"(?=.*{re.escape(term)})" for term in search_terms])
                 
-                # Filter the DataFrame using the new regex pattern
                 concept_articles = filtered_data[filtered_data['title'].str.contains(pattern, case=False, na=False, regex=True)]
                 
                 st.dataframe(concept_articles[['published_at', 'title', 'source', 'sentiment_compound']], use_container_width=True)
