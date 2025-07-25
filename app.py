@@ -89,7 +89,6 @@ else:
     }
     selected_timeframe_key = st.sidebar.selectbox("Select Timeframe", options=list(timeframe_options.keys()))
 
-    # --- NEW: Sentiment Legend ---
     st.sidebar.info("""
     **Sentiment Score Legend (VADER)**
     - **Positive:** > 0.05
@@ -112,15 +111,15 @@ else:
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Articles", f"{len(filtered_data):,}")
         avg_sentiment = filtered_data['sentiment_compound'].mean()
-        with col2:
-            st.metric("Avg. Sentiment Score", f"{avg_sentiment:.3f}" if not pd.isna(avg_sentiment) else "N/A")
-            if not pd.isna(avg_sentiment):
-                if avg_sentiment > 0.05:
-                    st.markdown("<p style='text-align: center;'>Positive 😊</p>", unsafe_allow_html=True)
-                elif avg_sentiment < -0.05:
-                    st.markdown("<p style='text-align: center;'>Negative 😟</p>", unsafe_allow_html=True)
-                else:
-                    st.markdown("<p style='text-align: center;'>Neutral 😐</p>", unsafe_allow_html=True)
+        sentiment_label = "N/A"
+        if not pd.isna(avg_sentiment):
+            if avg_sentiment > 0.05:
+                sentiment_label = f"{avg_sentiment:.3f} 😊"
+            elif avg_sentiment < -0.05:
+                sentiment_label = f"{avg_sentiment:.3f} 😟"
+            else:
+                sentiment_label = f"{avg_sentiment:.3f} 😐"
+        col2.metric("Avg. Sentiment Score", sentiment_label)
         col3.metric("Unique News Sources", f"{filtered_data['source'].nunique():,}")
         st.header("Visual Analysis")
         tab1, tab2, tab3, tab4 = st.tabs(["Sentiment Trend", "Sentiment Distribution", "Sentiment by Source", "Word Cloud"])
