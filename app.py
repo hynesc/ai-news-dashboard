@@ -6,6 +6,7 @@ import plotly.express as px
 from sklearn.feature_extraction.text import CountVectorizer
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+import re
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -15,12 +16,12 @@ st.set_page_config(
 )
 
 # --- Load Data ---
-@st.cache_data(ttl=600) # Cache data for 10 minutes
+@st.cache_data(ttl=600)
 def load_data(filename):
     """Loads data from CSV and caches it."""
     try:
         df = pd.read_csv(filename, parse_dates=['published_at'])
-        df['published_at'] = df['published_at'].dt.tz_localize(None) # Ensure timezone-naive
+        df['published_at'] = df['published_at'].dt.tz_localize(None)
         return df
     except FileNotFoundError:
         st.error(f"Error: The data file '{filename}' was not found. Please run the data collection script.")
@@ -45,8 +46,15 @@ def get_ngrams_df(texts, ngram_range=(2, 3), n_top=10):
 
 def create_wordcloud(texts):
     """Generates and returns a word cloud figure."""
+    from nltk.corpus import stopwords
+    stop_words = set(stopwords.words('english'))
+    stop_words.update(['ai', 's'])
+    
     text = " ".join(texts)
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+    wordcloud = WordCloud(
+        width=800, height=400, background_color='white', stopwords=stop_words
+    ).generate(text)
+    
     fig, ax = plt.subplots()
     ax.imshow(wordcloud, interpolation='bilinear')
     ax.axis("off")
@@ -60,31 +68,30 @@ st.markdown("An automated dashboard tracking global discourse on AI safety, alig
 if data.empty:
     st.warning("No data to display. The data file is missing or empty.")
 else:
-    # --- Sidebar Filters ---
     st.sidebar.header("Filters")
     timeframe_options = {
         "Last 7 Days": 7, "Last 30 Days": 30, "Last 90 Days": 90, "All Time": None
     }
-    selected_timeframe = st.sidebar.selectbox("Select Timeframe", options=list(timeframe_options.keys()))
+    selected_timeframe_key = st.sidebar.selectbox("Select Timeframe", options=list(timeframe_options.keys()))
 
-    if timeframe_options[selected_timeframe] is not None:
-        cutoff_date = pd.Timestamp.now() - pd.Timedelta(days=timeframe_options[selected_timeframe])
+    if timeframe_options[selected_timeframe_key] is not None:
+        days = timeframe_options[selected_timeframe_key]
+        cutoff_date = pd.Timestamp.now() - pd.Timedelta(days=days)
         filtered_data = data[data['published_at'] >= cutoff_date]
     else:
         filtered_data = data
 
     if filtered_data.empty:
-        st.warning(f"No articles found for the selected timeframe: **{selected_timeframe}**.")
+        st.warning(f"No articles found for the selected timeframe: **{selected_timeframe_key}**.")
     else:
-        # --- Display Metrics ---
-        st.header(f"Analytics for: {selected_timeframe}")
+        # (Metrics and Visualization Tabs remain the same...)
+        st.header(f"Analytics for: {selected_timeframe_key}")
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Articles", f"{len(filtered_data):,}")
         avg_sentiment = filtered_data['sentiment_compound'].mean()
         col2.metric("Avg. Sentiment Score", f"{avg_sentiment:.3f}" if not pd.isna(avg_sentiment) else "N/A")
         col3.metric("Unique News Sources", f"{filtered_data['source'].nunique():,}")
 
-        # --- Visualizations ---
         st.header("Visual Analysis")
         tab1, tab2, tab3, tab4 = st.tabs(["Sentiment Trend", "Sentiment Distribution", "Sentiment by Source", "Word Cloud"])
 
@@ -107,7 +114,6 @@ else:
             fig = create_wordcloud(filtered_data['title'].dropna())
             st.pyplot(fig)
 
-        # --- N-gram Analysis by Sentiment ---
         st.header("Key Concept Analysis")
         positive_articles = filtered_data[filtered_data['sentiment_compound'] > 0.1]
         negative_articles = filtered_data[filtered_data['sentiment_compound'] < -0.1]
@@ -122,7 +128,7 @@ else:
             neg_ngrams_df = get_ngrams_df(negative_articles['title'].dropna())
             st.dataframe(neg_ngrams_df, use_container_width=True)
 
-        # --- NEW: Deep Dive Feature ---
+        # --- Deep Dive Feature ---
         st.header("Deep Dive into Concepts")
         all_concepts = pd.concat([pos_ngrams_df, neg_ngrams_df])['Concept'].dropna().unique().tolist()
         
@@ -130,7 +136,15 @@ else:
             selected_concept = st.selectbox("Select a concept to see related articles:", options=all_concepts)
             if selected_concept:
                 st.subheader(f"Articles related to '{selected_concept}'")
-                concept_articles = filtered_data[filtered_data['title'].str.contains(selected_concept, case=False, na=False)]
+                
+                # Split the n-gram concept into individual words
+                search_terms = selected_concept.split()
+                # Create a regex pattern that ensures all words are present
+                pattern = "".join([f"(?=.*{re.escape(term)})" for term in search_terms])
+                
+                # Filter the DataFrame using the new regex pattern
+                concept_articles = filtered_data[filtered_data['title'].str.contains(pattern, case=False, na=False, regex=True)]
+                
                 st.dataframe(concept_articles[['published_at', 'title', 'source', 'sentiment_compound']], use_container_width=True)
         else:
             st.info("No concepts generated from the selected data to perform a deep dive.")
