@@ -7,20 +7,18 @@ import matplotlib.pyplot as plt
 import re
 import nltk
 
-# --- Function to download NLTK data ---
+# --- NLTK Downloader ---
 @st.cache_resource
 def download_nltk_resources():
     """Downloads all necessary NLTK resources if they don't exist."""
     resources = ["stopwords", "punkt"]
     for resource in resources:
         try:
-            # A robust way to check if the data is present
             nltk.data.find(f"corpora/{resource}.zip" if resource == 'stopwords' else f"tokenizers/{resource}")
         except LookupError:
             print(f"Downloading NLTK resource: {resource}...")
             nltk.download(resource, quiet=True)
 
-# --- Call the downloader at the start ---
 download_nltk_resources()
 
 
@@ -84,12 +82,22 @@ st.markdown("An automated dashboard tracking global discourse on AI safety, alig
 if data.empty:
     st.warning("No data to display. The data file is missing or empty.")
 else:
+    # --- Sidebar ---
     st.sidebar.header("Filters")
     timeframe_options = {
         "Last 7 Days": 7, "Last 30 Days": 30, "Last 90 Days": 90, "All Time": None
     }
     selected_timeframe_key = st.sidebar.selectbox("Select Timeframe", options=list(timeframe_options.keys()))
 
+    # --- NEW: Sentiment Legend ---
+    st.sidebar.info("""
+    **Sentiment Score Legend (VADER)**
+    - **Positive:** > 0.05
+    - **Neutral:** -0.05 to 0.05
+    - **Negative:** < -0.05
+    """)
+    
+    # Filter data based on selection
     if timeframe_options[selected_timeframe_key] is not None:
         days = timeframe_options[selected_timeframe_key]
         cutoff_date = pd.Timestamp.now() - pd.Timedelta(days=days)
@@ -104,9 +112,16 @@ else:
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Articles", f"{len(filtered_data):,}")
         avg_sentiment = filtered_data['sentiment_compound'].mean()
-        col2.metric("Avg. Sentiment Score", f"{avg_sentiment:.3f}" if not pd.isna(avg_sentiment) else "N/A")
+        with col2:
+            st.metric("Avg. Sentiment Score", f"{avg_sentiment:.3f}" if not pd.isna(avg_sentiment) else "N/A")
+            if not pd.isna(avg_sentiment):
+                if avg_sentiment > 0.05:
+                    st.markdown("<p style='text-align: center;'>Positive 😊</p>", unsafe_allow_html=True)
+                elif avg_sentiment < -0.05:
+                    st.markdown("<p style='text-align: center;'>Negative 😟</p>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<p style='text-align: center;'>Neutral 😐</p>", unsafe_allow_html=True)
         col3.metric("Unique News Sources", f"{filtered_data['source'].nunique():,}")
-
         st.header("Visual Analysis")
         tab1, tab2, tab3, tab4 = st.tabs(["Sentiment Trend", "Sentiment Distribution", "Sentiment by Source", "Word Cloud"])
 
