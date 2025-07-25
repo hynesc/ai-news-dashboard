@@ -26,12 +26,12 @@ class NewsProcessor:
     def __init__(self, api_key: str):
         if not api_key:
             raise ValueError("API key must be provided.")
+        self._download_nltk_resources()
         self.api = NewsApiClient(api_key=api_key)
         self.sid = SentimentIntensityAnalyzer()
         self.lemmatizer = WordNetLemmatizer()
         self.stop_words = set(stopwords.words('english'))
         self.stop_words.update(['ai', 'artificial', 'intelligence', 'agi'])
-        self._download_nltk_resources()
 
     def _download_nltk_resources(self):
         # ... (no changes in this method)
