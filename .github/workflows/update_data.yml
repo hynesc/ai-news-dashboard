@@ -2,10 +2,12 @@ name: Update News Data
 
 on:
   schedule:
-    # This runs the script every day at 2 AM UTC
+  # Runs the script every day at 2 am.
     - cron: '0 2 * * *'
   workflow_dispatch:
-    # This allows you to run it manually from the "Actions" tab in GitHub
+
+permissions:
+  contents: write
 
 jobs:
   build:
