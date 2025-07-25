@@ -89,6 +89,13 @@ else:
     }
     selected_timeframe_key = st.sidebar.selectbox("Select Timeframe", options=list(timeframe_options.keys()))
 
+    with st.sidebar.expander("See Tracked Keywords"):
+        st.write("""
+        This dashboard tracks news based on a strategic query targeting concepts like:
+        - **Core Phrases:** `"AI safety"`, `"AI alignment"`, `"AI governance"`, `"responsible AI"`, `"AGI"`, `"EU AI Act"`
+        - **Associated Concepts:** `existential risk`, `regulation`, `ethics`, `bias`, `disinformation`, `copyright`, `red-teaming`, and `interpretability` when mentioned with AI.
+        """)
+    
     st.sidebar.info("""
     **Sentiment Score Legend (VADER)**
     - **Positive:** > 0.05
