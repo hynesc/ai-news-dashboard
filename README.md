@@ -64,6 +64,8 @@ streamlit run app.py
 
 ```bash
 export NEWSAPI_KEY="..."
+export NEWS_QUERY='("AI safety" OR ... )'   # optional override
+export NEWS_OUTPUT_CSV="news_data.csv"      # optional override
 python news_pipeline.py
 ```
 

@@ -13,8 +13,18 @@ def test_sentiment_text_prefers_description_and_trims() -> None:
 def test_dedupe_prefers_url() -> None:
     df = pd.DataFrame(
         [
-            {"title": "a", "url": "https://example.com/1", "source": "x", "published_at": "2025-01-01"},
-            {"title": "a (dupe)", "url": "https://example.com/1", "source": "y", "published_at": "2025-01-02"},
+            {
+                "title": "a",
+                "url": "https://example.com/1",
+                "source": "x",
+                "published_at": "2025-01-01",
+            },
+            {
+                "title": "a (dupe)",
+                "url": "https://example.com/1",
+                "source": "y",
+                "published_at": "2025-01-02",
+            },
         ]
     )
     out = dedupe_articles(df)
@@ -38,4 +48,3 @@ def test_dedupe_handles_missing_columns() -> None:
     out = dedupe_articles(df)
     # Without any identifying columns, we can't reliably dedupe; we should not crash.
     assert len(out) == 2
-

@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
-import os
 from typing import Optional
 
-
 DEFAULT_SEARCH_QUERY = (
-    '"AI safety" OR "AI alignment" OR "AI governance" OR "responsible AI" OR "AGI" OR "EU AI Act" OR '
-    '("existential risk" AND AI) OR (regulation AND AI) OR (ethics AND AI) OR (bias AND AI) OR '
-    '(("misinformation" OR "disinformation") AND AI) OR (copyright AND AI) OR '
-    '("red-teaming" AND AI) OR (interpretability AND AI)'
+    # High-precision core phrases:
+    '"AI safety" OR "AI alignment" OR "AI governance" OR "responsible AI" OR '
+    '"frontier model" OR "EU AI Act" OR '
+    # Broader governance-adjacent coverage, gated by an AI anchor to reduce noise:
+    '((AI OR "artificial intelligence" OR "generative AI") AND '
+    "(regulation OR policy OR governance OR oversight OR standards OR "
+    'copyright OR "fair use" OR "training data" OR '
+    "deepfake OR misinformation OR disinformation OR "
+    "privacy OR surveillance OR biometric OR "
+    "bias OR discrimination OR "
+    "antitrust OR "
+    "lawsuit OR court OR "
+    '"export controls" OR compute OR gpu OR '
+    "security OR cyber OR malware))"
 )
 
 
@@ -26,5 +35,9 @@ class Settings:
     max_pages: int = 1
 
     @staticmethod
-    def from_env() -> "Settings":
-        return Settings(newsapi_key=os.getenv("NEWSAPI_KEY"))
+    def from_env() -> Settings:
+        return Settings(
+            newsapi_key=os.getenv("NEWSAPI_KEY"),
+            search_query=os.getenv("NEWS_QUERY", DEFAULT_SEARCH_QUERY),
+            output_csv=Path(os.getenv("NEWS_OUTPUT_CSV", "news_data.csv")),
+        )

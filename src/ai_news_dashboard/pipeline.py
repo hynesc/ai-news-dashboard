@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
-import logging
 from typing import Any, Optional
 
 import pandas as pd
@@ -91,7 +91,9 @@ def analyze_sentiment(articles: list[dict[str, Any]]) -> pd.DataFrame:
                 title=(article.get("title") or "").strip(),
                 url=article.get("url"),
                 published_at=_safe_parse_datetime(article.get("publishedAt")),
-                content_snippet=(article.get("description") or article.get("content") or "").strip(),
+                content_snippet=(
+                    (article.get("description") or article.get("content") or "").strip()
+                ),
                 sentiment_compound=float(sentiment),
             ).__dict__
         )
