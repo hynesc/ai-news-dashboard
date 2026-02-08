@@ -1,23 +1,33 @@
+from __future__ import annotations
+
+from pathlib import Path
+import re
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from sklearn.feature_extraction.text import CountVectorizer
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
-import re
-import nltk
+
+
+def _add_src_to_path() -> None:
+    import sys
+
+    src = Path(__file__).resolve().parent / "src"
+    if str(src) not in sys.path:
+        sys.path.insert(0, str(src))
+
+
+_add_src_to_path()
+
+from ai_news_dashboard.nltk_resources import ensure_nltk_data  # noqa: E402
+from ai_news_dashboard.text_analytics import top_ngrams_df  # noqa: E402
 
 # --- NLTK Downloader ---
 @st.cache_resource
-def download_nltk_resources():
+def download_nltk_resources() -> None:
     """Downloads all necessary NLTK resources if they don't exist."""
-    resources = ["stopwords", "punkt"]
-    for resource in resources:
-        try:
-            nltk.data.find(f"corpora/{resource}.zip" if resource == 'stopwords' else f"tokenizers/{resource}")
-        except LookupError:
-            print(f"Downloading NLTK resource: {resource}...")
-            nltk.download(resource, quiet=True)
+    ensure_nltk_data(["stopwords"])
 
 download_nltk_resources()
 
@@ -31,46 +41,42 @@ st.set_page_config(
 
 # --- Load Data ---
 @st.cache_data(ttl=600)
-def load_data(filename):
+def load_data(filename: str) -> pd.DataFrame:
     """Loads data from CSV and caches it."""
     try:
-        df = pd.read_csv(filename, parse_dates=['published_at'])
-        df['published_at'] = df['published_at'].dt.tz_localize(None)
+        df = pd.read_csv(filename)
+        if "published_at" in df.columns:
+            published = pd.to_datetime(df["published_at"], utc=True, errors="coerce")
+            df["published_at"] = published.dt.tz_convert(None)
         return df
     except FileNotFoundError:
         st.error(f"Error: The data file '{filename}' was not found. Please run the data collection script.")
         return pd.DataFrame()
 
-data = load_data("news_data.csv")
+DATA_PATH = Path(__file__).resolve().parent / "news_data.csv"
+data = load_data(str(DATA_PATH))
 
 # --- Helper Functions ---
-def get_ngrams_df(texts, ngram_range=(2, 3), n_top=10):
-    """Generates a DataFrame of top n-grams."""
-    if texts.empty:
-        return pd.DataFrame(columns=['Concept', 'Frequency'])
-    try:
-        vectorizer = CountVectorizer(ngram_range=ngram_range, stop_words='english')
-        X = vectorizer.fit_transform(texts)
-        sum_words = X.sum(axis=0)
-        words_freq = [(word, sum_words[0, idx]) for word, idx in vectorizer.vocabulary_.items()]
-        words_freq = sorted(words_freq, key=lambda x: x[1], reverse=True)
-        return pd.DataFrame(words_freq[:n_top], columns=['Concept', 'Frequency'])
-    except ValueError:
-        return pd.DataFrame(columns=['Concept', 'Frequency'])
+def build_all_terms_regex(terms: list[str]) -> str:
+    # Positive lookaheads let us do an AND search for all terms in any order.
+    return "".join([f"(?=.*{re.escape(term)})" for term in terms if term.strip()])
+
+
 
 def create_wordcloud(texts):
     """Generates and returns a word cloud figure."""
     from nltk.corpus import stopwords
-    stop_words = set(stopwords.words('english'))
-    stop_words.update(['ai'])    # Manually add 'ai' as a stop word
-    
+
+    stop_words = set(stopwords.words("english"))
+    stop_words.update(["ai"])  # Manually add "ai" as a stop word
+
     text = " ".join(texts)
     wordcloud = WordCloud(
-        width=800, height=400, background_color='white', stopwords=stop_words
+        width=800, height=400, background_color="white", stopwords=stop_words
     ).generate(text)
-    
+
     fig, ax = plt.subplots()
-    ax.imshow(wordcloud, interpolation='bilinear')
+    ax.imshow(wordcloud, interpolation="bilinear")
     ax.axis("off")
     return fig
 
@@ -157,11 +163,11 @@ else:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Top Concepts in Positive News")
-            pos_ngrams_df = get_ngrams_df(positive_articles['title'].dropna())
+            pos_ngrams_df = top_ngrams_df(positive_articles["title"].dropna())
             st.dataframe(pos_ngrams_df, use_container_width=True)
         with col2:
             st.subheader("Top Concepts in Negative News")
-            neg_ngrams_df = get_ngrams_df(negative_articles['title'].dropna())
+            neg_ngrams_df = top_ngrams_df(negative_articles["title"].dropna())
             st.dataframe(neg_ngrams_df, use_container_width=True)
 
         st.header("Deep Dive into Concepts")
@@ -173,7 +179,7 @@ else:
                 st.subheader(f"Articles related to '{selected_concept}'")
                 
                 search_terms = selected_concept.split()
-                pattern = "".join([f"(?=.*{re.escape(term)})" for term in search_terms])
+                pattern = build_all_terms_regex(search_terms)
                 
                 concept_articles = filtered_data[filtered_data['title'].str.contains(pattern, case=False, na=False, regex=True)]
                 

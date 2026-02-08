@@ -48,3 +48,32 @@ The core of this project is an automated data pipeline managed by GitHub Actions
 3.  **Analysis & Aggregation:** The script analyzes the sentiment of the new articles, appends them to the existing `news_data.csv`, removes duplicates, and saves the updated file.
 4.  **Commit to Repo:** The GitHub Action automatically commits the updated `news_data.csv` back to the repository.
 5.  **Dashboard Refresh:** The live Streamlit app detects the change in the data file and automatically refreshes its cache, ensuring the dashboard always displays the most current information.
+
+## Development
+
+This repo keeps `app.py` and `news_pipeline.py` as stable entrypoints for Streamlit Cloud and GitHub Actions.
+Shared logic lives under `src/ai_news_dashboard/`.
+
+### Run The Dashboard
+
+```bash
+streamlit run app.py
+```
+
+### Run The Pipeline Locally
+
+```bash
+export NEWSAPI_KEY="..."
+python news_pipeline.py
+```
+
+### Code Quality (Optional)
+
+Dev tooling is configured in `pyproject.toml`.
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+ruff check .
+ruff format .
+pytest
+```
