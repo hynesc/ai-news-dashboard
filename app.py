@@ -298,10 +298,26 @@ def render_app(df: pd.DataFrame) -> None:
         series = (
             filtered.set_index("published_at").resample("D")["sentiment_compound"].mean().dropna()
         )
+        trend = series.rename("daily_mean").to_frame()
+        trend["ma_7d"] = trend["daily_mean"].rolling(window=7, min_periods=1).mean()
+        trend = trend.reset_index()
+
         fig = px.line(
-            series,
-            labels={"value": "Avg. Sentiment", "index": "Date"},
+            trend,
+            x="published_at",
+            y=["daily_mean", "ma_7d"],
+            labels={"value": "Avg. Sentiment", "published_at": "Date", "variable": "Series"},
             template="plotly_white",
+        )
+        fig.update_traces(
+            selector={"name": "daily_mean"},
+            name="Daily mean",
+            opacity=0.35,
+        )
+        fig.update_traces(
+            selector={"name": "ma_7d"},
+            name="7-day moving average",
+            line={"width": 3},
         )
         st.plotly_chart(fig, use_container_width=True)
 
