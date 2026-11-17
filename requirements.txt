@@ -1,8 +1,8 @@
-pandas
+pandas>=2.0
 newsapi-python
 nltk
 scikit-learn
-streamlit
+streamlit>=1.49
 plotly
 wordcloud
 matplotlib

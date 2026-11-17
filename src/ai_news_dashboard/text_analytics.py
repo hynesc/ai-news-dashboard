@@ -97,9 +97,9 @@ def distinctive_ngrams_df(
 
     combined = pd.concat([positive_texts, negative_texts], ignore_index=True)
     try:
-        vectorizer.fit(combined)
-        X_pos = vectorizer.transform(positive_texts)
-        X_neg = vectorizer.transform(negative_texts)
+        matrix = vectorizer.fit_transform(combined.fillna(""))
+        X_pos = matrix[: len(positive_texts)]
+        X_neg = matrix[len(positive_texts) :]
     except ValueError:
         return _empty_concepts_df()
 
@@ -107,15 +107,10 @@ def distinctive_ngrams_df(
     neg = np.asarray(X_neg.sum(axis=0)).ravel().astype(float)
     vocab = vectorizer.get_feature_names_out()
 
-    pos_total = float(pos.sum())
-    neg_total = float(neg.sum())
-    V = float(len(vocab))
-    if pos_total <= 0 or neg_total <= 0 or V <= 0:
-        return _empty_concepts_df()
-
-    denom_pos = pos_total + alpha * V
-    denom_neg = neg_total + alpha * V
-    score = np.log((pos + alpha) / denom_pos) - np.log((neg + alpha) / denom_neg)
+    # Binary features count documents, so normalize by bucket sizes, not vocabulary hits.
+    score = np.log((pos + alpha) / (len(positive_texts) - pos + alpha)) - np.log(
+        (neg + alpha) / (len(negative_texts) - neg + alpha)
+    )
 
     out = pd.DataFrame(
         {

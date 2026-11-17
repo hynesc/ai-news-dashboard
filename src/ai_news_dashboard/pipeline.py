@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Optional
 
 import pandas as pd
@@ -65,8 +68,10 @@ def fetch_articles(
             )
         except Exception:
             log.exception("NewsAPI request failed on page %s", page)
-            break
+            raise
 
+        if resp.get("status") == "error":
+            raise RuntimeError(f"NewsAPI error: {resp.get('message', 'unknown error')}")
         batch = resp.get("articles") or []
         articles.extend(batch)
         if len(batch) < page_size:
@@ -81,7 +86,7 @@ def analyze_sentiment(articles: list[dict[str, Any]]) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
     for article in articles:
         text = _sentiment_text(article)
-        if not text.strip():
+        if not text.strip() or (article.get("title") or "").strip() in {"", "[Removed]"}:
             continue
 
         sentiment = sid.polarity_scores(text)["compound"]
@@ -114,10 +119,11 @@ def dedupe_articles(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     idx = df.index
     # Prefer URL for dedupe when available; fall back to title+source+published_at.
-    has_url = df.get("url").notna() if "url" in df.columns else pd.Series(False, index=df.index)
+    urls = df.get("url", pd.Series("", index=idx)).fillna("").astype(str).str.strip()
+    has_url = urls.ne("")
     df["__dedupe_key"] = None
     if "url" in df.columns:
-        df.loc[has_url, "__dedupe_key"] = df.loc[has_url, "url"].astype(str).str.strip().str.lower()
+        df.loc[has_url, "__dedupe_key"] = urls[has_url]
 
     title = (
         df["title"].fillna("").astype(str).str.strip().str.lower()
@@ -130,7 +136,7 @@ def dedupe_articles(df: pd.DataFrame) -> pd.DataFrame:
         else pd.Series("", index=idx)
     )
     published = (
-        pd.to_datetime(df["published_at"], errors="coerce", utc=True)
+        pd.to_datetime(df["published_at"], errors="coerce", utc=True, format="mixed")
         .dt.strftime("%Y-%m-%dT%H:%M:%SZ")
         .fillna("")
         if "published_at" in df.columns
@@ -148,14 +154,28 @@ def load_existing(path: str) -> pd.DataFrame:
     try:
         df = pd.read_csv(path, parse_dates=["published_at"])
         if "published_at" in df.columns:
-            df["published_at"] = pd.to_datetime(df["published_at"], utc=True, errors="coerce")
+            df["published_at"] = pd.to_datetime(
+                df["published_at"], utc=True, errors="coerce", format="mixed"
+            )
         return df
     except FileNotFoundError:
         return pd.DataFrame()
 
 
 def save_csv(df: pd.DataFrame, path: str) -> None:
-    df.to_csv(path, index=False, encoding="utf-8")
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=destination.parent, suffix=".csv", delete=False
+        ) as handle:
+            temporary = Path(handle.name)
+            df.to_csv(handle, index=False)
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def run(settings: Settings) -> int:
