@@ -116,7 +116,8 @@ def dedupe_articles(df: pd.DataFrame) -> pd.DataFrame:
     # Prefer URL for dedupe when available; fall back to title+source+published_at.
     has_url = df.get("url").notna() if "url" in df.columns else pd.Series(False, index=df.index)
     df["__dedupe_key"] = None
-    df.loc[has_url, "__dedupe_key"] = df.loc[has_url, "url"].astype(str).str.strip().str.lower()
+    if "url" in df.columns:
+        df.loc[has_url, "__dedupe_key"] = df.loc[has_url, "url"].astype(str).str.strip().str.lower()
 
     title = (
         df["title"].fillna("").astype(str).str.strip().str.lower()

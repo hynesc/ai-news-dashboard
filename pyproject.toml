@@ -12,7 +12,7 @@ target-version = "py39"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 ignore = [
-  # Project supports Python 3.9 (GitHub Actions). PEP 604 (`X | None`) requires Python 3.10+.
+  # Project supports Python 3.9+. PEP 604 (`X | None`) requires Python 3.10+.
   "UP045",
 ]
 
